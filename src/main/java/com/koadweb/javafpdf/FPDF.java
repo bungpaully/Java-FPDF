@@ -22,6 +22,7 @@
 package com.koadweb.javafpdf;
 
 import com.koadweb.javafpdf.util.Compressor;
+
 import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -34,12 +35,14 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+
 import javax.imageio.ImageIO;
 
 /**
@@ -239,10 +242,46 @@ public abstract class FPDF {
 
 	private static final String revision;
 
+	private static final Map<String, List<String>> codes;
+	private static final Map<String, List<String>> parities;
+
 	static {
 		// Some CVS magic to find out the revision of this class
 		String rev = "$Revision: 1.10 $";
 		revision = rev.substring(11, rev.length() - 2);
+
+		// Convertit les chiffres en barres
+		codes = new HashMap<>();
+		String[] code = new String[] { "0001101", "0011001", "0010011", "0111101", "0100011", "0110001", "0101111", "0111011", "0110111", "0001011" };
+		codes.put("A", new ArrayList<>(Arrays.asList(code)));
+
+		code = new String[] { "0100111", "0110011", "0011011", "0100001", "0011101", "0111001", "0000101", "0010001", "0001001", "0010111" };
+		codes.put("B", new ArrayList<>(Arrays.asList(code)));
+
+		code = new String[] { "1110010", "1100110", "1101100", "1000010", "1011100", "1001110", "1010000", "1000100", "1001000", "1110100" };
+		codes.put("C", new ArrayList<>(Arrays.asList(code)));
+
+		parities = new HashMap<>();
+		String[] paritie = new String[] { "A", "A", "A", "A", "A", "A" };
+		parities.put("0", new ArrayList<>(Arrays.asList(paritie)));
+		paritie = new String[] { "A", "A", "B", "A", "B", "B" };
+		parities.put("1", new ArrayList<>(Arrays.asList(paritie)));
+		paritie = new String[] { "A", "A", "B", "B", "A", "B" };
+		parities.put("2", new ArrayList<>(Arrays.asList(paritie)));
+		paritie = new String[] { "A", "A", "B", "B", "B", "A" };
+		parities.put("3", new ArrayList<>(Arrays.asList(paritie)));
+		paritie = new String[] { "A", "B", "A", "A", "B", "B" };
+		parities.put("4", new ArrayList<>(Arrays.asList(paritie)));
+		paritie = new String[] { "A", "B", "B", "A", "A", "B" };
+		parities.put("5", new ArrayList<>(Arrays.asList(paritie)));
+		paritie = new String[] { "A", "B", "B", "B", "A", "A" };
+		parities.put("6", new ArrayList<>(Arrays.asList(paritie)));
+		paritie = new String[] { "A", "B", "A", "B", "A", "B" };
+		parities.put("7", new ArrayList<>(Arrays.asList(paritie)));
+		paritie = new String[] { "A", "B", "A", "B", "B", "A" };
+		parities.put("8", new ArrayList<>(Arrays.asList(paritie)));
+		paritie = new String[] { "A", "B", "B", "A", "B", "A" };
+		parities.put("9", new ArrayList<>(Arrays.asList(paritie)));
 	}
 
 	/**
@@ -2735,86 +2774,146 @@ public abstract class FPDF {
 			this.y = this.h + y;
 		}
 	}
-	
+
+	/** Output a string */
+	public void TextWithDirection(final float x, final float y, final String txt, String direction) {
+		if (direction.isEmpty()) {
+			direction = "R";
+		}
+
+		float xx = Float.valueOf(x * this.k);
+		float yy = Float.valueOf((this.h - y) * this.k);
+		StringBuilder s = new StringBuilder();
+		String text = this._escape(txt);
+
+		switch (direction) {
+		case "R":
+			s.append(String.format(Locale.ENGLISH, "BT %.2f %.2f %.2f %.2f %.2f %.2f Tm (%s) Tj ET", 1, 0, 0, 1, xx, yy, text));
+			break;
+		case "L":
+			s.append(String.format(Locale.ENGLISH, "BT %.2f %.2f %.2f %.2f %.2f %.2f Tm (%s) Tj ET", -1, 0, 0, -1, xx, yy, text));
+			break;
+		case "U":
+			s.append(String.format(Locale.ENGLISH, "BT %.2f %.2f %.2f %.2f %.2f %.2f Tm (%s) Tj ET", 0, 1, -1, 0, xx, yy, text));
+			break;
+		case "D":
+			s.append(String.format(Locale.ENGLISH, "BT %.2f %.2f %.2f %.2f %.2f %.2f Tm (%s) Tj ET", 0, -1, 1, 0, xx, yy, text));
+			break;
+		default:
+			s.append(String.format(Locale.ENGLISH, "BT %.2f %.2f Td (%s) Tj ET", xx, yy, text));
+			break;
+		}
+
+		if (this.underline && (txt != null)) {
+			s.append(' ').append(this._dounderline(x, y, txt));
+		}
+
+		if (this.colorFlag) {
+			s.append("q ").append(this.textColor).append(' ').append(s).append(" Q");
+		}
+
+		this._out(s.toString());
+	}
+
 	/** Output a string */
 	public void TextWithRotation(final float x, final float y, final String txt, double txtAngle, double fontAngle) {
+		String text = this._escape(txt);
 		fontAngle += 90 + txtAngle;
 		txtAngle = Math.toRadians(txtAngle);
 		fontAngle = Math.toRadians(fontAngle);
-		
+
 		double txtDX = Math.cos(txtAngle);
 		double txtDY = Math.sin(txtAngle);
 		double fontDX = Math.cos(fontAngle);
 		double fontDY = Math.sin(fontAngle);
-		
+
 		StringBuilder s = new StringBuilder();
-		s.append(String.format(Locale.ENGLISH, "BT %.2f %.2f %.2f %.2f %.2f %.2f Tm (%s) Tj ET", 
-				txtDX, txtDY, fontDX, fontDY,
-				Float.valueOf(x * this.k), Float.valueOf((this.h - y) * this.k), this._escape(txt)));
-		
-		if (this.underline && (txt != null)) {
-			s.append(' ').append(this._dounderline(x, y, txt));
+		s.append(String.format(Locale.ENGLISH, "BT %.2f %.2f %.2f %.2f %.2f %.2f Tm (%s) Tj ET", txtDX, txtDY, fontDX, fontDY, Float.valueOf(x * this.k),
+				Float.valueOf((this.h - y) * this.k), text));
+
+		if (this.underline && (!text.isEmpty())) {
+			s.append(' ').append(this._dounderline(x, y, text));
 		}
-		
+
 		if (this.colorFlag) {
-			s.append("q ").append(this.textColor).append(' ').append(s).append(" Q"); 
+			s.append("q ").append(this.textColor).append(' ').append(s).append(" Q");
 		}
-		
+
 		this._out(s.toString());
+	}
+
+	public void EAN13(final float x, final float y, String barcode, Float h, Float w) throws IOException {
+		if (h == null) {
+			h = 16f;
+		}
+		if (w == null) {
+			w = 0.35f;
+		}
+		this.barcode(x, y, barcode, h, w, 13);
+	}
+
+	public String isbnNum(String chaine) {
+		String isbnCode = chaine.replace("/[^0-9]/", "");
+		return isbnCode;
+	}
+
+	public String filtreIsbn(String chaine) {
+		String filtreIsbn = chaine.replace("/[^0-9-]/", "");
+		return filtreIsbn;
+	}
+
+	public void barcode(final float x, final float y, String barcode, final float h, final float w, int len) throws IOException {
+		// Ajoute des 0 si nécessaire
+		String zeros = "0000000000000";
+		barcode = (zeros + barcode).substring(barcode.length());
+
+		StringBuilder code = new StringBuilder();
+		code.append("101");
+		List<String> p = parities.get(barcode.charAt(0) + "");
+		for (int i = 1; i <= 6; i++) {
+			try {
+				int key = Integer.parseInt(barcode.charAt(i) + "");
+				code.append(codes.get(p.get(i - 1)).get(key));
+			} catch (NumberFormatException e) {
+
+			}
+		}
+		code.append("01010");
+		for (int i = 7; i <= 12; i++) {
+			try {
+				int key = Integer.parseInt(barcode.charAt(i) + "");
+				code.append(codes.get("C").get(key));
+			} catch (NumberFormatException e) {
+
+			}
+		}
+		code.append("101");
+		// Dessine les barres
+		for (int i = 0; i < code.length(); i++) {
+			if (code.charAt(i) == '1') {
+				this.setFillColor(0, 0, 0);
+				this.Rect(new Coordinate(x + i * w, y), w, h, DrawMode.FILLED);
+			}
+		}
+		// Imprime le texte sous le code-barres
+		this.setFont("Arial", null, 9);
+		this.Text(x, y + h + 8 / this.k, barcode.substring(len));
 	}
 
 	/** Output a string */
 	public void Text(final float x, final float y, final String txt) {
 		StringBuilder s = new StringBuilder();
-		
-		s.append(String.format(Locale.ENGLISH, "BT %.2f %.2f Td (%s) Tj ET", 
-				Float.valueOf(x * this.k), Float.valueOf((this.h - y) * this.k), this._escape(txt)));
-		
+
+		s.append(String.format(Locale.ENGLISH, "BT %.2f %.2f Td (%s) Tj ET", Float.valueOf(x * this.k), Float.valueOf((this.h - y) * this.k), this._escape(txt)));
+
 		if (this.underline && (txt != null)) {
 			s.append(' ').append(this._dounderline(x, y, txt));
 		}
-		
-		if (this.colorFlag) {
-			s.append("q ").append(this.textColor).append(' ').append(s).append(" Q"); 
-		}
-		
-		this._out(s.toString());
-	}
 
-	/** Output a string */
-	public void TextWithRotation2(final float x, final float y, final String txt, int txtAngle, int fontAngle) {
-		StringBuilder s = new StringBuilder();
-		
-		fontAngle += 90 + txtAngle;
-		txtAngle *= Math.PI /180;
-		fontAngle *= Math.PI /180;
-		
-		double txtDX = Math.cos(txtAngle);
-		double txtDY = Math.sin(txtAngle);
-		double fontDX = Math.cos(fontAngle);
-		double fontDY = Math.sin(fontAngle);
-
-		
-		
-//		s.append(String.format("BT %.2f %.2f %.2f %.2f %.2f %.2f Td (%s) Tj ET",
-//				txtDX, txtDY, fontDX, fontDY,
-//				x * this.k, (this.h - y) * this.k, this._escape(txt)));
-		s.append(String.format("BT %.2f %.2f %.2f %.2f %.2f %.2f Td (%s) Tj ET", 
-				0f, 1f, -1f, 0f, 
-				x * this.k, (this.h - y) * this.k, this._escape(txt)));
-		
-		if (this.underline && (txt != null)) {
-			s.append(' ').append(this._dounderline(x, y, txt));
-		}
-		
 		if (this.colorFlag) {
-			s.append("q ").append(this.textColor).append(' '); 
+			s.append("q ").append(this.textColor).append(' ').append(s).append(" Q");
 		}
-		
-//		if (this.colorFlag) {
-//			s.append(" Q");
-//		}
-		
+
 		this._out(s.toString());
 	}
 
