@@ -396,7 +396,7 @@ public abstract class FPDF {
 		this.coreFonts.put("timesBI", "Times-BoldItalic");
 		this.coreFonts.put("symbol", "Symbol");
 		this.coreFonts.put("zapfdingbats", "ZapfDingbats");
-		this.coreFonts.put("baskerville", "Baskerville");
+		this.coreFonts.put("baskerville", "BaskervilleBT-Roman");
 		// Scale factor
 		this.k = unit;
 		// Page format
@@ -831,7 +831,7 @@ public abstract class FPDF {
 				this._newobj();
 				this._out("<</Type /Font");
 				this._out("/BaseFont /" + name);
-				this._out("/Subtype /Type1");
+				this._out("/Subtype /TrueType");
 				if ((name != "Symbol") && (name != "ZapfDingbats")) {
 					this._out("/Encoding /WinAnsiEncoding");
 				}
@@ -2634,7 +2634,7 @@ public abstract class FPDF {
 			// Check if one of the standard fonts
 			if (this.coreFonts.get(fontkey) != null) {
 				int i = this.fonts.size() + 1;
-				Font font = new Font(i, Font.Type.CORE, this.coreFonts.get(fontkey), -100, 50, getCharwidths(fontkey));
+				Font font = new Font(i, Font.Type.CORE, this.coreFonts.get(fontkey), -139, 56, getCharwidths(fontkey));
 				this.fonts.put(fontkey, font);
 			} else {
 				throw new IOException("Undefined font: " + family + " " + style);
@@ -2853,12 +2853,12 @@ public abstract class FPDF {
 	}
 
 	public String isbnNum(String chaine) {
-		String isbnCode = chaine.replace("/[^0-9]/", "");
+		String isbnCode = chaine.replaceAll("[^0-9]", "");
 		return isbnCode;
 	}
 
 	public String filtreIsbn(String chaine) {
-		String filtreIsbn = chaine.replace("/[^0-9-]/", "");
+		String filtreIsbn = chaine.replaceAll("[^0-9-]", "");
 		return filtreIsbn;
 	}
 
@@ -2875,7 +2875,6 @@ public abstract class FPDF {
 				int key = Integer.parseInt(barcode.charAt(i) + "");
 				code.append(codes.get(p.get(i - 1)).get(key));
 			} catch (NumberFormatException e) {
-
 			}
 		}
 		code.append("01010");
