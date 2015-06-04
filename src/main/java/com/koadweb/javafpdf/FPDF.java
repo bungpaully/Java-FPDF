@@ -611,9 +611,9 @@ public abstract class FPDF {
 			 * probably not go through this method.
 			 */
 			try {
-				this.buffer.add((s.replace('€', (char) 128) + '\n').getBytes("ISO-8859-1"));
+				this.buffer.add((s.replace('â‚¬', (char) 128) + '\n').getBytes("ISO-8859-1"));
 			} catch (UnsupportedEncodingException e) {
-				this.buffer.add((s.replace('€', (char) 128) + '\n').getBytes());
+				this.buffer.add((s.replace('â‚¬', (char) 128) + '\n').getBytes());
 				e.printStackTrace();
 			}
 		}
@@ -2863,7 +2863,7 @@ public abstract class FPDF {
 	}
 
 	public void barcode(final float x, final float y, String barcode, final float h, final float w, int len) throws IOException {
-		// Ajoute des 0 si nécessaire
+		// Ajoute des 0 si nï¿½cessaire
 		String zeros = "0000000000000";
 		barcode = (zeros + barcode).substring(barcode.length());
 
